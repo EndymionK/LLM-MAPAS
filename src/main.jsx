@@ -7,7 +7,7 @@ import "./styles.css";
 
 const COLOMBIA = [4.5709, -74.2973];
 const PRESETS = {
-  "Atlas nocturno": { palette: "gray", contours: true, fill: false, shade: 0, color: "#d9d8d0", width: 0.72, count: 18, exaggeration: 1, background: [16, 18, 18], grid: true, gridColor: "#6f7470", gridOpacity: 0.32, labels: true, majorEvery: 5 },
+  "Atlas nocturno": { palette: "gray", contours: true, fill: false, shade: 0, color: "#d9d8d0", width: 0.72, count: 12, exaggeration: 1, background: [16, 18, 18], grid: true, gridColor: "#6f7470", gridOpacity: 0.32, labels: true, majorEvery: 5 },
   "Relieve natural": { palette: "terrain", contours: true, fill: true, shade: 0.28, color: "#26342f", width: 0.8, count: 14, exaggeration: 1 },
   "Lectura altimetrica": { palette: "viridis", contours: true, fill: true, shade: 0.12, color: "#14221f", width: 0.65, count: 16, exaggeration: 1.15 },
   "Curvas de campo": { palette: "gray", contours: true, fill: false, shade: 0, color: "#f1ead7", width: 1, count: 18, exaggeration: 1 },
@@ -200,7 +200,7 @@ function App() {
         <div className="canvas-wrap" onWheel={handlePreviewWheel}>{image ? <><img src={image.url} alt="Previsualizacion topografica" style={{ width: `${previewZoom * 100}%`, height: `${previewZoom * 100}%` }} /><div className="zoom-controls" aria-label="Controles de zoom"><button type="button" onClick={() => changePreviewZoom(0.25)} aria-label="Acercar">+</button><button type="button" onClick={() => changePreviewZoom(-0.25)} aria-label="Alejar">−</button><button type="button" onClick={() => setPreviewZoom(1)} aria-label="Restablecer zoom">1:1</button></div><span className="zoom-level">{Math.round(previewZoom * 100)}%</span></> : <div className="empty-state"><span className="contour-mark">⌁</span><strong>Tu relieve aparecera aqui</strong><span>Selecciona una zona en el mapa para cargar el modelo de elevacion.</span></div>}</div>
         <div className="controls">
           <div className="preset-toolbar"><span className="section-label">Estilos</span><label className="route-upload">Subir GPX/KML<input type="file" accept=".gpx,.kml,application/gpx+xml,application/vnd.google-earth.kml+xml" onChange={handleRouteUpload} /></label></div>
-          <div className="quick-panel"><div className="preset-grid">{Object.keys(PRESETS).map((name) => <button key={name} className={style.preset === name ? "preset selected" : "preset"} onClick={() => applyPreset(name)}><span className={`swatch swatch-${PRESETS[name].palette}`} style={name === "Lineas blancas" ? { background: "repeating-linear-gradient(135deg, #050505 0 5px, #ffffff 5px 6px)" } : name === "Atlas nocturno" ? { background: "repeating-linear-gradient(135deg, #101212 0 6px, #d9d8d0 6px 7px)" } : undefined}></span><span>{name}</span></button>)}</div><label className="range-label"><span>Cantidad de lineas <output>{style.count}</output></span><input type="range" min="8" max="100" value={style.count} onChange={(event) => updateGeneral("count", Number(event.target.value))} /></label><label className="range-label"><span>Exageracion del relieve <output>{style.exaggeration.toFixed(1)}x</output></span><input type="range" min="0.5" max="3" step="0.1" value={style.exaggeration} onChange={(event) => updateGeneral("exaggeration", Number(event.target.value))} /></label>{route && <div className="route-summary"><strong>{route.name}</strong><span>{route.points.length} puntos · margen automatico</span></div>}</div>
+          <div className="quick-panel"><div className="preset-grid">{Object.keys(PRESETS).map((name) => <button key={name} className={style.preset === name ? "preset selected" : "preset"} onClick={() => applyPreset(name)}><span className={`swatch swatch-${PRESETS[name].palette}`} style={name === "Lineas blancas" ? { background: "repeating-linear-gradient(135deg, #050505 0 5px, #ffffff 5px 6px)" } : name === "Atlas nocturno" ? { background: "repeating-linear-gradient(135deg, #101212 0 6px, #d9d8d0 6px 7px)" } : undefined}></span><span>{name}</span></button>)}</div><label className="range-label"><span>Cantidad de lineas <output>{style.count}</output></span><input type="range" min="4" max="50" value={style.count} onChange={(event) => updateGeneral("count", Number(event.target.value))} /></label><label className="range-label"><span>Exageracion del relieve <output>{style.exaggeration.toFixed(1)}x</output></span><input type="range" min="0.5" max="3" step="0.1" value={style.exaggeration} onChange={(event) => updateGeneral("exaggeration", Number(event.target.value))} /></label>{route && <div className="route-summary"><strong>{route.name}</strong><span>{route.points.length} puntos · margen automatico</span></div>}</div>
           <Advanced style={style} updateStyle={updateImageStyle} hasRoute={Boolean(route)} />
           <div className="control-actions"><button onClick={() => render()} disabled={loading || !bounds} className="primary">{loading ? "Generando..." : "Regenerar preview"}</button>{image && <a className="download" href={image.url} download="topomapas-colombia.png">Descargar PNG</a>}</div>
         </div>
@@ -258,7 +258,8 @@ function drawContourLevel(context, values, width, height, level, major, color) {
 }
 
 function renderRaster(values, width, height, style, bounds, route) {
-  const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height; const context = canvas.getContext("2d"); const pixels = context.createImageData(width, height); let min = Infinity; let max = -Infinity;
+  const renderScale = 2;
+  const canvas = document.createElement("canvas"); canvas.width = width * renderScale; canvas.height = height * renderScale; const context = canvas.getContext("2d"); const pixels = context.createImageData(width * renderScale, height * renderScale); let min = Infinity; let max = -Infinity;
   for (const rawValue of values) {
     const value = Number(rawValue);
     if (Number.isFinite(value)) {
@@ -268,8 +269,10 @@ function renderRaster(values, width, height, style, bounds, route) {
   }
   if (!Number.isFinite(min) || !Number.isFinite(max)) throw new Error("El DEM no contiene elevaciones validas.");
   const range = max - min || 1;
-  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) { const index = y * width + x; const value = Number(values[index]); const t = Number.isFinite(value) ? (value - min) / range : 0; let [r, g, b] = style.fill && !style.transparent ? palette(style.palette, t) : (style.background || (style.transparent ? [255, 255, 255] : [24, 34, 30])); const dx = Number(values[index + 1] ?? value) - Number(values[index - 1] ?? value); const dy = Number(values[index + width] ?? value) - Number(values[index - width] ?? value); const shade = style.shade * Math.max(-1, Math.min(1, (dx - dy) / Math.max(1, range * 0.02))) * 80; r = Math.max(0, Math.min(255, r + shade)); g = Math.max(0, Math.min(255, g + shade)); b = Math.max(0, Math.min(255, b + shade)); pixels.data[index * 4] = r; pixels.data[index * 4 + 1] = g; pixels.data[index * 4 + 2] = b; pixels.data[index * 4 + 3] = style.transparent ? Math.round(255 * Math.max(0.15, style.shade || 0.8)) : 255; }
+  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) { const index = y * width + x; const value = Number(values[index]); const t = Number.isFinite(value) ? (value - min) / range : 0; let [r, g, b] = style.fill && !style.transparent ? palette(style.palette, t) : (style.background || (style.transparent ? [255, 255, 255] : [24, 34, 30])); const dx = Number(values[index + 1] ?? value) - Number(values[index - 1] ?? value); const dy = Number(values[index + width] ?? value) - Number(values[index - width] ?? value); const shade = style.shade * Math.max(-1, Math.min(1, (dx - dy) / Math.max(1, range * 0.02))) * 80; r = Math.max(0, Math.min(255, r + shade)); g = Math.max(0, Math.min(255, g + shade)); b = Math.max(0, Math.min(255, b + shade)); for (let offsetY = 0; offsetY < renderScale; offsetY += 1) for (let offsetX = 0; offsetX < renderScale; offsetX += 1) { const outputIndex = ((y * renderScale + offsetY) * width * renderScale + x * renderScale + offsetX) * 4; pixels.data[outputIndex] = r; pixels.data[outputIndex + 1] = g; pixels.data[outputIndex + 2] = b; pixels.data[outputIndex + 3] = style.transparent ? Math.round(255 * Math.max(0.15, style.shade || 0.8)) : 255; } }
   context.putImageData(pixels, 0, 0);
+  context.save();
+  context.scale(renderScale, renderScale);
   if (style.grid) {
     context.save();
     context.strokeStyle = style.gridColor || "#6f7470";
@@ -286,10 +289,10 @@ function renderRaster(values, width, height, style, bounds, route) {
     context.restore();
   }
   if (style.contours) {
-    const pixelLimit = Math.max(8, Math.min(32, Math.floor(Math.min(width, height) / 16)));
+    const pixelLimit = Math.max(6, Math.min(28, Math.floor(Math.min(width, height) / 18)));
     const reliefFactor = Math.min(1, Math.max(0.42, range / 900));
-    const areaFactor = Math.min(1.5, Math.max(0.45, Math.sqrt(selectedAreaKm2(bounds) / 150)));
-    const contourCount = Math.max(6, Math.min(32, pixelLimit, Math.round(style.count * areaFactor * reliefFactor)));
+    const areaFactor = Math.min(1.5, Math.max(0.35, Math.sqrt(selectedAreaKm2(bounds) / 150)));
+    const contourCount = Math.max(4, Math.min(28, pixelLimit, Math.round(style.count * areaFactor * reliefFactor)));
     context.lineJoin = "round";
     context.lineCap = "round";
     for (let index = 1; index <= contourCount; index += 1) {
@@ -330,6 +333,7 @@ function renderRaster(values, width, height, style, bounds, route) {
     context.globalAlpha = 1;
     context.stroke();
   }
+  context.restore();
   return canvas.toDataURL("image/png");
 }
 
