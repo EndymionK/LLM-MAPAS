@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+salidas/
+.opentopography_key
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+.vercel
+cache/
+logs/
