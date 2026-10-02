@@ -7,12 +7,12 @@ import "./styles.css";
 
 const COLOMBIA = [4.5709, -74.2973];
 const PRESETS = {
-  "Atlas nocturno": { palette: "gray", contours: true, fill: false, shade: 0, color: "#d9d8d0", width: 0.72, count: 30, exaggeration: 1, background: [16, 18, 18], grid: true, gridColor: "#6f7470", gridOpacity: 0.32, labels: true, majorEvery: 5 },
-  "Relieve natural": { palette: "terrain", contours: true, fill: true, shade: 0.28, color: "#26342f", width: 0.8, count: 22, exaggeration: 1 },
-  "Lectura altimetrica": { palette: "viridis", contours: true, fill: true, shade: 0.12, color: "#14221f", width: 0.65, count: 28, exaggeration: 1.15 },
-  "Curvas de campo": { palette: "gray", contours: true, fill: false, shade: 0, color: "#f1ead7", width: 1, count: 30, exaggeration: 1 },
-  "Contraste editorial": { palette: "gist_earth", contours: true, fill: true, shade: 0.42, color: "#111716", width: 0.55, count: 18, exaggeration: 1.4 },
-  "Lineas blancas": { palette: "gray", contours: true, fill: false, shade: 0, color: "#ffffff", width: 0.9, count: 28, exaggeration: 1, background: [5, 5, 5] },
+  "Atlas nocturno": { palette: "gray", contours: true, fill: false, shade: 0, color: "#d9d8d0", width: 0.72, count: 18, exaggeration: 1, background: [16, 18, 18], grid: true, gridColor: "#6f7470", gridOpacity: 0.32, labels: true, majorEvery: 5 },
+  "Relieve natural": { palette: "terrain", contours: true, fill: true, shade: 0.28, color: "#26342f", width: 0.8, count: 14, exaggeration: 1 },
+  "Lectura altimetrica": { palette: "viridis", contours: true, fill: true, shade: 0.12, color: "#14221f", width: 0.65, count: 16, exaggeration: 1.15 },
+  "Curvas de campo": { palette: "gray", contours: true, fill: false, shade: 0, color: "#f1ead7", width: 1, count: 18, exaggeration: 1 },
+  "Contraste editorial": { palette: "gist_earth", contours: true, fill: true, shade: 0.42, color: "#111716", width: 0.55, count: 12, exaggeration: 1.4 },
+  "Lineas blancas": { palette: "gray", contours: true, fill: false, shade: 0, color: "#ffffff", width: 0.9, count: 16, exaggeration: 1, background: [5, 5, 5] },
 };
 const initialStyle = { ...PRESETS["Atlas nocturno"], preset: "Atlas nocturno", transparent: false, interval: 20, azimuth: 315, altitude: 45, routeColor: "#ef4444", routeWidth: 4 };
 
@@ -219,6 +219,13 @@ function palette(name, value) {
   return stops.at(-1).slice(1);
 }
 
+function selectedAreaKm2(bounds) {
+  if (!bounds) return 100;
+  const latitudeSpanKm = Math.abs(bounds.north - bounds.south) * 110.574;
+  const longitudeSpanKm = Math.abs(bounds.east - bounds.west) * 111.32 * Math.cos(((bounds.north + bounds.south) / 2) * Math.PI / 180);
+  return Math.max(0.1, latitudeSpanKm * longitudeSpanKm);
+}
+
 function drawContourLevel(context, values, width, height, level, major, color) {
   const path = new Path2D();
   const interpolate = (x1, y1, value1, x2, y2, value2) => {
@@ -279,9 +286,10 @@ function renderRaster(values, width, height, style, bounds, route) {
     context.restore();
   }
   if (style.contours) {
-    const pixelLimit = Math.max(10, Math.floor(Math.min(width, height) / 24));
+    const pixelLimit = Math.max(8, Math.min(32, Math.floor(Math.min(width, height) / 16)));
     const reliefFactor = Math.min(1, Math.max(0.42, range / 900));
-    const contourCount = Math.max(8, Math.min(60, pixelLimit, Math.round(style.count * reliefFactor)));
+    const areaFactor = Math.min(1.5, Math.max(0.45, Math.sqrt(selectedAreaKm2(bounds) / 150)));
+    const contourCount = Math.max(6, Math.min(32, pixelLimit, Math.round(style.count * areaFactor * reliefFactor)));
     context.lineJoin = "round";
     context.lineCap = "round";
     for (let index = 1; index <= contourCount; index += 1) {
